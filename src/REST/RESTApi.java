@@ -1,8 +1,10 @@
 package REST;
 
 import support.APIType;
+import support.InfoType;
 import support.OAuthTokenSecret;
 import OpenAuthentication.OpenAuthentication;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -17,11 +19,13 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import oauth.signpost.OAuthConsumer;
 import oauth.signpost.basic.DefaultOAuthConsumer;
 import oauth.signpost.exception.OAuthCommunicationException;
 import oauth.signpost.exception.OAuthExpectationFailedException;
 import oauth.signpost.exception.OAuthMessageSignerException;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -95,82 +99,86 @@ public class RESTApi {
         RESTApi rae = new RESTApi();
         rae.LoadTwitterToken();
         rae.Consumer = rae.GetConsumer();
-        System.out.println(rae.GetStatuses("vietkungfu"));
+//        System.out.println(rae.GetStatuses("vietkungfu"));
 //        System.out.println(rae.GetRateLimitStatus());
-//        int apicode = InfoType.PROFILE_INFO;
-//        String infilename = rae.DEF_FILENAME;
-//        String outfilename = rae.DEF_OUTFILENAME;
-//        if(args!=null)
-//        {
-//            if(args.length>2)
-//            {
-//                apicode = Integer.parseInt(args[2]);
-//                outfilename = args[1];
-//                infilename = args[0];
-//            }
-//            if(args.length>1)
-//            {
-//                outfilename = args[1];
-//                infilename = args[0];
-//            }
-//            else
-//            if(args.length>0)
-//            {
-//                infilename = args[0];
-//            }
-//        }
+        int apicode = InfoType.PROFILE_INFO;
+        String infilename = rae.DEF_FILENAME;
+        String outfilename = rae.DEF_OUTFILENAME;
+        if(args!=null)
+        {
+            if(args.length>2)
+            {
+                apicode = Integer.parseInt(args[2]);
+                outfilename = args[1];
+                infilename = args[0];
+            }
+            if(args.length>1)
+            {
+                outfilename = args[1];
+                infilename = args[0];
+            }
+            else
+            if(args.length>0)
+            {
+                infilename = args[0];
+            }
+        }
 //        rae.InitializeWriters(outfilename);
 //        rae.ReadUsers(infilename);
-//        if(apicode!=InfoType.PROFILE_INFO&&apicode!=InfoType.FOLLOWER_INFO&&apicode!=InfoType.FRIEND_INFO&&apicode!=InfoType.STATUSES_INFO)
-//        {
-//          System.out.println("Invalid API type: Use 0 for Profile, 1 for Followers, 2 for Friends, and 3 for Statuses");
-//          System.exit(0);
-//        }
-//        if(rae.Usernames.size()>0)
-//        {
-//            //TO-DO: Print the possible API types and get user selection to crawl the users.
-//            rae.LoadTwitterToken();
-//            for(String user:rae.Usernames)
-//            {
-//                if(apicode==InfoType.PROFILE_INFO)
-//                {
-//                    JSONObject jobj = rae.GetProfile(user);
-//                    if(jobj!=null&&jobj.length()==0)
-//                    {
-//                        rae.WriteToFile(user, jobj.toString());
-//                    }
-//                }
-//                else
-//                if(apicode==InfoType.FRIEND_INFO)
-//                {
-//                    JSONArray statusarr = rae.GetFriends(user);
-//                    if(statusarr.length()>0)
-//                    {
+        if(apicode!=InfoType.PROFILE_INFO&&apicode!=InfoType.FOLLOWER_INFO&&apicode!=InfoType.FRIEND_INFO&&apicode!=InfoType.STATUSES_INFO)
+        {
+          System.out.println("Invalid API type: Use 0 for Profile, 1 for Followers, 2 for Friends, and 3 for Statuses");
+          System.exit(0);
+        }
+        if(rae.Usernames.size()>0)
+        {
+            //TO-DO: Print the possible API types and get user selection to crawl the users.
+            rae.LoadTwitterToken();
+            for(String user:rae.Usernames)
+            {
+                if(apicode==InfoType.PROFILE_INFO)
+                {
+                    JSONObject jobj = rae.GetProfile(user);
+                    if(jobj!=null&&jobj.length()==0)
+                    {
+// Save PROFILE into cassandra ===================================================
+//                    	rae.WriteToFile(user, jobj.toString());
+                    }
+                }
+                else
+                if(apicode==InfoType.FRIEND_INFO)
+                {
+                    JSONArray statusarr = rae.GetFriends(user);
+                    if(statusarr.length()>0)
+                    {
+// Save FOLLOWING-FRIEND into cassandra ====================================================
 //                        rae.WriteToFile(user, statusarr.toString());
-//                    }
-//                }
-//                else
-//                if(apicode == InfoType.FOLLOWER_INFO)
-//                {
-//                    JSONArray statusarr = rae.GetFollowers(user);
-//                    if(statusarr.length()>0)
-//                    {
+                    }
+                }
+                else
+                if(apicode == InfoType.FOLLOWER_INFO)
+                {
+                    JSONArray statusarr = rae.GetFollowers(user);
+                    if(statusarr.length()>0)
+                    {
+// Save FOLLOWER into cassandra ====================================================
 //                        rae.WriteToFile(user, statusarr.toString());
-//                    }
-//                }
-//                else
-//                if(apicode == InfoType.STATUSES_INFO)
-//                {
-//                    JSONArray statusarr = rae.GetStatuses(user);
-//                    if(statusarr.length()>0)
-//                    {
+                    }
+                }
+                else
+                if(apicode == InfoType.STATUSES_INFO)
+                {
+                    JSONArray statusarr = rae.GetStatuses(user);
+                    if(statusarr.length()>0)
+                    {
+// Save TWEET into cassandra ====================================================
 //                        rae.GetStatuses(user);
-//                    }
-//                }
-//            }
-//        }
-////        now you can close the files as all the threads have finished
-//        rae.CleanupAfterFinish();
+                    }
+                }
+            }
+        }
+//        now you can close the files as all the threads have finished
+        rae.CleanupAfterFinish();
    }
 
     /**
@@ -214,22 +222,22 @@ public class RESTApi {
     * @param path of the file
     * @param outFilename name of the file
     */
-   public void InitializeWriters(String outFilename) {
-        try {
-            File fl = new File(outFilename);
-            if(!fl.exists())
-            {
-                fl.createNewFile();
-            }
-            /**
-             * Use UTF-8 encoding when saving files to avoid
-             * losing Unicode characters in the data
-             */
-            OutFileWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFilename,true),"UTF-8"));
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-    }
+//   public void InitializeWriters(String outFilename) {
+//        try {
+//            File fl = new File(outFilename);
+//            if(!fl.exists())
+//            {
+//                fl.createNewFile();
+//            }
+//            /**
+//             * Use UTF-8 encoding when saving files to avoid
+//             * losing Unicode characters in the data
+//             */
+//            OutFileWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFilename,true),"UTF-8"));
+//        } catch (IOException ex) {
+//            ex.printStackTrace();
+//        }
+//    }
 
    /**
     * Close the opened filewriter to save the data
@@ -248,16 +256,16 @@ public class RESTApi {
     * @param data containing the retrived information in JSON
     * @param user name of the user currently being written
     */
-    public void WriteToFile(String user, String data)
-    {
-        try
-        {
-            OutFileWriter.write(data);
-            OutFileWriter.newLine();
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-    }
+//    public void WriteToFile(String user, String data)
+//    {
+//        try
+//        {
+//            OutFileWriter.write(data);
+//            OutFileWriter.newLine();
+//        } catch (IOException ex) {
+//            ex.printStackTrace();
+//        }
+//    }
 
     /**
      * Retrives the profile information of the user
