@@ -99,7 +99,7 @@ public class RESTApi {
         RESTApi rae = new RESTApi();
         rae.LoadTwitterToken();
         rae.Consumer = rae.GetConsumer();
-//        System.out.println(rae.GetStatuses("vietkungfu"));
+//        System.out.println(rae.GetProfile("vietkungfu"));
 //        System.out.println(rae.GetRateLimitStatus());
         int apicode = InfoType.PROFILE_INFO;
         String infilename = rae.DEF_FILENAME;
@@ -124,7 +124,7 @@ public class RESTApi {
             }
         }
 //        rae.InitializeWriters(outfilename);
-//        rae.ReadUsers(infilename);
+        rae.ReadUsers(infilename);
         if(apicode!=InfoType.PROFILE_INFO&&apicode!=InfoType.FOLLOWER_INFO&&apicode!=InfoType.FRIEND_INFO&&apicode!=InfoType.STATUSES_INFO)
         {
           System.out.println("Invalid API type: Use 0 for Profile, 1 for Followers, 2 for Friends, and 3 for Statuses");
@@ -139,6 +139,7 @@ public class RESTApi {
                 if(apicode==InfoType.PROFILE_INFO)
                 {
                     JSONObject jobj = rae.GetProfile(user);
+                    System.out.println(rae.GetProfile(user));
                     if(jobj!=null&&jobj.length()==0)
                     {
 // Save PROFILE into cassandra ===================================================
@@ -149,6 +150,7 @@ public class RESTApi {
                 if(apicode==InfoType.FRIEND_INFO)
                 {
                     JSONArray statusarr = rae.GetFriends(user);
+                    System.out.println(rae.GetFriends(user));
                     if(statusarr.length()>0)
                     {
 // Save FOLLOWING-FRIEND into cassandra ====================================================
@@ -169,6 +171,7 @@ public class RESTApi {
                 if(apicode == InfoType.STATUSES_INFO)
                 {
                     JSONArray statusarr = rae.GetStatuses(user);
+                    System.out.println(statusarr);
                     if(statusarr.length()>0)
                     {
 // Save TWEET into cassandra ====================================================
