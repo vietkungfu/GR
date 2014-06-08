@@ -5,20 +5,20 @@ import support.InfoType;
 import support.OAuthTokenSecret;
 import OpenAuthentication.OpenAuthentication;
 
+import store.StoreToCassandra;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.Properties;
 
 import oauth.signpost.OAuthConsumer;
 import oauth.signpost.basic.DefaultOAuthConsumer;
@@ -94,27 +94,27 @@ public class RESTApi {
         OAuthTokens = OpenAuthentication.DEBUGUserAccessSecret();
     }
 
-    public static void main(String[] args)
+    public static void main(String[] args) throws JSONException
     {
+   	
         RESTApi rae = new RESTApi();
+        StoreToCassandra storeToCassandra = new StoreToCassandra();
+    	/**
+         * load the properties files
+         */
+    	storeToCassandra.properties = rae.loadProperties("queries");
         rae.LoadTwitterToken();
         rae.Consumer = rae.GetConsumer();
 //        System.out.println(rae.GetProfile("vietkungfu"));
 //        System.out.println(rae.GetRateLimitStatus());
         int apicode = InfoType.PROFILE_INFO;
         String infilename = rae.DEF_FILENAME;
-        String outfilename = rae.DEF_OUTFILENAME;
+//        String outfilename = rae.DEF_OUTFILENAME;
         if(args!=null)
         {
-            if(args.length>2)
-            {
-                apicode = Integer.parseInt(args[2]);
-                outfilename = args[1];
-                infilename = args[0];
-            }
             if(args.length>1)
-            {
-                outfilename = args[1];
+            {	
+            	apicode = Integer.parseInt(args[1]);
                 infilename = args[0];
             }
             else
@@ -139,7 +139,8 @@ public class RESTApi {
                 if(apicode==InfoType.PROFILE_INFO)
                 {
                     JSONObject jobj = rae.GetProfile(user);
-                    System.out.println(rae.GetProfile(user));
+                    JSONArray a = (JSONArray) jobj.getJSONObject("status").getJSONObject("entities").get("user_mentions");
+                    if(a.length() != 0) System.out.println(a.getJSONObject(0).get("name"));
                     if(jobj!=null&&jobj.length()==0)
                     {
 // Save PROFILE into cassandra ===================================================
@@ -288,12 +289,10 @@ public class RESTApi {
             // Step 2: Sign the request using the OAuth Secret
             Consumer.sign(huc);
             huc.connect();
-            if(huc.getResponseCode()==404||huc.getResponseCode()==401)
-            {
+            if(huc.getResponseCode()==404||huc.getResponseCode()==401){
                System.out.println(huc.getResponseMessage());
             }           
-            else
-            if(huc.getResponseCode()==500||huc.getResponseCode()==502||huc.getResponseCode()==503)
+            else if(huc.getResponseCode()==500||huc.getResponseCode()==502||huc.getResponseCode()==503)
             {
                 try {
                     huc.disconnect();
@@ -303,9 +302,8 @@ public class RESTApi {
                     ex.printStackTrace();
                 }
             }
-            else
-                // Step 3: If the requests have been exhausted, then wait until the quota is renewed
-            if(huc.getResponseCode()==429)
+         // Step 3: If the requests have been exhausted, then wait until the quota is renewed
+            else if(huc.getResponseCode()==429)
             {
                 try {
                     huc.disconnect();
@@ -315,6 +313,7 @@ public class RESTApi {
                     ex.printStackTrace();
                 }
             }
+            
             if(!flag)
             {
                 //recreate the connection because something went wrong the first time.
@@ -679,5 +678,17 @@ public class RESTApi {
             }
         }
         return 0;
+    }
+    
+    private Properties loadProperties(String propertiesFileName) {
+        Properties prop = new Properties();
+        try {
+            prop.load(new FileInputStream(propertiesFileName + ".properties"));
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            System.err.println(ex.getMessage());
+        }
+ 
+        return prop;
     }
 }
