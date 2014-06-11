@@ -1,150 +1,126 @@
 package store;
- 
+
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Locale;
 import java.util.Properties;
- 
+
+import Bean.FollowerList;
+import Bean.FollowersDetails;
+import Bean.FriendList;
+import Bean.FriendsDetails;
+import Bean.Tweet;
+import Bean.UserDetails;
+
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 
+import store.CassandraInfo;
+
 public class StoreToCassandra {
-    Cluster cluster = null;
+	
+	Cluster cluster = null;
     Session session = null;
     public  Properties properties;
- 
-    /**
-     * Connecting with Cassandra
-     */
-    public void connect() {
-        cluster = Cluster.builder().addContactPoints(properties.getProperty("NODE"))
-                .build();
-        session = cluster.connect(properties.getProperty("keyspaceName"));
-        System.out.println("CONNECTED !! ! ");
+    
+    public void connectToCassandra(){
+    	cluster = Cluster.builder().addContactPoint(properties.getProperty(CassandraInfo.NODE)).build();
+    	session = cluster.connect(properties.getProperty(CassandraInfo.KEYSPACE));
+    	System.out.println("CONNECTED TO " + CassandraInfo.KEYSPACE);
     }
- 
-    /**
-     * @param userDetails
-     * @throws Exception
-     *             Insert the details of user and friend list
-     */
-    public void insertUserDetails(UserDetails userDetails) throws Exception {
-        BoundStatement boundStatement = null;
-        PreparedStatement prepare_statement = null;
-        String userName = userDetails.getScreenName();
-        /**
-         * insert user details
-         */
-        prepare_statement = session.prepare(CassandraInfo.INSERT_USER_DETAILS);
+    
+    public void insertUserDetail(UserDetails userDetail){
+    	BoundStatement boundStatement = null;
+    	PreparedStatement prepare_statement = null;
+    	prepare_statement = session.prepare(CassandraInfo.INSERT_USER_DETAILS);
+    	boundStatement = new BoundStatement(prepare_statement);
+    	session.execute(boundStatement.bind(
+    			userDetail.getUserName(),
+    			userDetail.getScreenName(),
+    			userDetail.getLocation(), 
+    			userDetail.getTweetId(), 
+    			userDetail.getCreatedDate(), 
+    			userDetail.getUrl()
+		));
+    	
+    	 /*prepare_statement = session.prepare(CassandraInfo.UPDATE_TWITTER_USERNAME);
+         boundStatement = new BoundStatement(prepare_statement);
+         session.execute(boundStatement.bind(userDetail.getUserName(), screenName));*/
+    }
+    
+    public void insertFriendsList(FriendList friendList){
+    	BoundStatement boundStatement = null;
+    	PreparedStatement prepare_statement = null; 
+    	prepare_statement = session.prepare(CassandraInfo.INSERT_FRIEND_LIST);
+         boundStatement = new BoundStatement(prepare_statement);
+         session.execute(boundStatement.bind(
+        		 friendList.getScreenName(),
+                 friendList.getFriendList()));  
+    }
+    
+    public void insertFollowersList(FollowerList followerList){
+    	BoundStatement boundStatement = null;
+    	PreparedStatement prepare_statement = null;
+    	prepare_statement = session.prepare(CassandraInfo.INSERT_FOLLOWER_LIST);
         boundStatement = new BoundStatement(prepare_statement);
-        session.execute(boundStatement.bind(userDetails.getUserName(),
-                userName, userDetails.getLocation(), userDetails.getTweetId(),
-                userDetails.getCreatedDate(), userDetails.getUrl()));
- 
-        prepare_statement = session
-                .prepare(CassandraInfo.UPDATE_TWITTER_USERNAME);
-        boundStatement = new BoundStatement(prepare_statement);
-        session.execute(boundStatement.bind(userDetails.getUserName(), userName));
-        /**
-         * insert friends names as list
-         */
-        prepare_statement = session.prepare(CassandraInfo.INSERT_FRIEND_LIST);
-        boundStatement = new BoundStatement(prepare_statement);
-        session.execute(boundStatement.bind(userName,
-                userDetails.getFriendList()));
- 
-        insertFriendsDetails(userDetails);// to insert friends details
-        /**
-         * insert followers names as list
-         */
- 
-        prepare_statement = session.prepare(CassandraInfo.INSERT_FOLLOWER_LIST);
-        boundStatement = new BoundStatement(prepare_statement);
-        session.execute(boundStatement.bind(userName,
-                userDetails.getFollowerList()));
- 
-        System.out.println("Insert into  twitter_followers_list!!");
- 
-        insertFollowersDetails(userDetails);
+        session.execute(boundStatement.bind(
+        		followerList.getScreenName(),
+                followerList.getFollowerList()));
     }
- 
-    /**
-     * @param userDetails
-     *            insert details of followers of a user
-     */
-    private void insertFollowersDetails(UserDetails userDetails) {
-        BoundStatement boundStatement = null;
-        PreparedStatement prepare_statement = null;
-        String userName = userDetails.getScreenName();
-        for (FriendsDetails fd : userDetails.getFollowersList()) {
-            prepare_statement = session
-                    .prepare(CassandraInfo.INSERT_FOLLOWER_DETAILS);
-            boundStatement = new BoundStatement(prepare_statement);
-            session.execute(boundStatement.bind(userName, fd.getScreen_name(),
-                    fd.getUserName(), fd.getLocation(), fd.getTweetId(),
-                    fd.getCreatedDate(), fd.getUrl()));
-            /**
-             * update followers count
-             */
-            prepare_statement = session
-                    .prepare(CassandraInfo.UPDATE_FOLLOWER_COUNT);
-            boundStatement = new BoundStatement(prepare_statement);
-            session.execute(boundStatement.bind(userName));
-            /**
-             * insert user and screen name to the column family
-             */
-            prepare_statement = session
-                    .prepare(CassandraInfo.UPDATE_TWITTER_USERNAME);
-            boundStatement = new BoundStatement(prepare_statement);
-            session.execute(boundStatement.bind(fd.getUserName(),
-                    fd.getScreen_name()));
-        }
- 
+    
+    public void insertFriendDetails(FriendsDetails friendDetail){
+    	BoundStatement boundStatement = null;
+    	PreparedStatement prepare_statement = null;
+    	prepare_statement = session.prepare(CassandraInfo.INSERT_FRIEND_DETAILS);
+    	boundStatement = new BoundStatement(prepare_statement);
+    	session.execute(boundStatement.bind(
+    			friendDetail.getUserScreenName(),
+    			friendDetail.getFriendScreenName(),
+    			friendDetail.getFriendName(),
+    			friendDetail.getLocation(), 
+    			friendDetail.getTweetId(), 
+    			friendDetail.getCreatedDate(), 
+    			friendDetail.getUrl()
+		));
     }
- 
-    /**
-     * @param userDetails
-     *            insert details of friends of a user
-     */
-    private void insertFriendsDetails(UserDetails userDetails) {
-        BoundStatement boundStatement = null;
-        PreparedStatement prepare_statement = null;
-        String userName = userDetails.getScreenName();
-        for (FriendsDetails fd : userDetails.getFriendsList()) {
- 
-            prepare_statement = session
-                    .prepare(CassandraInfo.INSERT_FRIEND_DETAILS);
-            boundStatement = new BoundStatement(prepare_statement);
-            session.execute(boundStatement.bind(userName, fd.getScreen_name(),
-                    fd.getUserName(), fd.getLocation(), fd.getTweetId(),
-                    fd.getCreatedDate(), fd.getUrl()));
- 
-            /**
-             * update friends count
-             */
-            prepare_statement = session
-                    .prepare(CassandraInfo.UPDATE_FRIEND_COUNT);
-            boundStatement = new BoundStatement(prepare_statement);
-            session.execute(boundStatement.bind(userName));
- 
-            /**
-             * insert user and screen name to the column family
-             */
-            prepare_statement = session
-                    .prepare(CassandraInfo.UPDATE_TWITTER_USERNAME);
-            boundStatement = new BoundStatement(prepare_statement);
-            session.execute(boundStatement.bind(fd.getUserName(),
-                    fd.getScreen_name()));
-        }
+
+    public void insertFollowersDetails(FollowersDetails followerDetail){
+    	BoundStatement boundStatement = null;
+    	PreparedStatement prepare_statement = null;
+    	prepare_statement = session.prepare(CassandraInfo.INSERT_FOLLOWER_DETAILS);
+    	boundStatement = new BoundStatement(prepare_statement);
+    	session.execute(boundStatement.bind(
+    			followerDetail.getUserScreenName(),
+    			followerDetail.getFollowerScreenName(),
+    			followerDetail.getFollowerName(),
+    			followerDetail.getLocation(), 
+    			followerDetail.getTweetId(), 
+    			followerDetail.getCreatedDate(), 
+    			followerDetail.getUrl()
+		));
     }
- 
-/**
-     * Disconnecting with Cassandra
-     */
- 
-    public void disconnect() {
-        cluster.shutdown();
-        System.out.println("Disconnected!!");
- 
+    
+    public void insertTweet(Tweet tweet){
+    	BoundStatement boundStatement = null;
+    	PreparedStatement prepare_statement = null;
+    	prepare_statement = session.prepare(CassandraInfo.INSERT_FOLLOWER_DETAILS);
+    	Calendar currentDate = Calendar.getInstance();
+    	SimpleDateFormat formatter= new SimpleDateFormat("EEE MMM dd HH:mm:ss Z yyyy", Locale.ENGLISH); //format it as per your requirement
+    	String dateNow = formatter.format(currentDate.getTime());
+    	boundStatement = new BoundStatement(prepare_statement);
+    	session.execute(boundStatement.bind(
+    			tweet.getStatusId(),
+    			tweet.getScreenName(),
+    			tweet.getPublishedDate(),
+    			dateNow,
+    			tweet.getTitle()
+		));
     }
- 
+    
+    public void disconnectFromCassandra(){
+    	cluster.close();
+    	System.out.println("Disconnected From Cassandra.");
+    }
 }

@@ -2,10 +2,10 @@ package Bean;
 
 import java.util.Date;
 
-public class FriendsDetails {
+public class FollowersDetails {
 	String userScreenName;
-	String friendName;
-    String friendScreenName;
+	String followerName;
+    String followerScreenName;
     String location;
     Long tweetId;
     Date createdDate;
@@ -16,17 +16,17 @@ public class FriendsDetails {
     public void setUserScreenName(String userScreenName) {
         this.userScreenName = userScreenName;
     }
-    public String getFriendName() {
-        return friendName;
+    public String getFollowerName() {
+        return followerName;
     }
-    public void setFriendName(String friendName) {
-        this.friendName = friendName;
+    public void setFollowerName(String FollowerName) {
+        this.followerName = FollowerName;
     }
-    public String getFriendScreenName() {
-        return friendScreenName;
+    public String getFollowerScreenName() {
+        return followerScreenName;
     }
-    public void setFriendScreenName(String friendScreenName) {
-        this.friendScreenName = friendScreenName;
+    public void setFollowerScreenName(String FollowerScreenName) {
+        this.followerScreenName = FollowerScreenName;
     }
     public String getLocation() {
         return location;

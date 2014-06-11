@@ -11,11 +11,7 @@ public class UserDetails {
 	Long tweetId;
 	Date createdDate;
 	String url;
-	List<String> friendList = new LinkedList<String>();
-	List<FriendsDetails> friendsList = new LinkedList<FriendsDetails>();
-	List<String> followerList = new LinkedList<String>();
-	List<FriendsDetails> followersList = new LinkedList<FriendsDetails>();
-
+	
 	public String getScreenName() {
 		return screenName;
 	}
@@ -31,10 +27,6 @@ public class UserDetails {
 	public String getUserName() {
 		return userName;
 	}
-
-	/*public void setScreen_name(String screenName) {
-		this.screenName = screenName;
-	}*/
 
 	public String getLocation() {
 		return location;
@@ -66,37 +58,5 @@ public class UserDetails {
 
 	public void setUrl(String url) {
 		this.url = url;
-	}
-
-	public List<String> getFriendList() {
-		return friendList;
-	}
-
-	public void setFriendList(List<String> friendList) {
-		this.friendList = friendList;
-	}
-
-	public List<FriendsDetails> getFriendsList() {
-		return friendsList;
-	}
-
-	public void setFriendsList(List<FriendsDetails> friendsList) {
-		this.friendsList = friendsList;
-	}
-
-	public List<String> getFollowerList() {
-		return followerList;
-	}
-
-	public void setFollowerList(List<String> followerList) {
-		this.followerList = followerList;
-	}
-
-	public List<FriendsDetails> getFollowersList() {
-		return followersList;
-	}
-
-	public void setFollowersList(List<FriendsDetails> followersList) {
-		this.followersList = followersList;
 	}
 }

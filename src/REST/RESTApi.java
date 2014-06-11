@@ -5,8 +5,6 @@ import support.InfoType;
 import support.OAuthTokenSecret;
 import OpenAuthentication.OpenAuthentication;
 
-import store.StoreToCassandra;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileInputStream;
@@ -15,10 +13,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.Properties;
+import java.util.Locale;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -34,7 +33,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import store.StoreToCassandra;
-
+import Bean.FollowerList;
+import Bean.FollowersDetails;
+import Bean.FriendList;
 import Bean.FriendsDetails;
 import Bean.Tweet;
 import Bean.UserDetails;
@@ -96,30 +97,20 @@ public class RESTApi {
 	 */
 	public void LoadTwitterToken()
 	{
-		//Un-comment before release
-		//        OAuthExample oae = new OAuthExample();
-		//        OAuthTokens =  oae.GetUserAccessKeySecret();
-		//Remove before release
 		OAuthTokens = OpenAuthentication.DEBUGUserAccessSecret();
 	}
 
 	public static void main(String[] args) throws JSONException
 	{
-
+		System.out.println("aaaaa");
 		RESTApi rae = new RESTApi();
 		StoreToCassandra storeToCassandra = new StoreToCassandra();
-		UserDetails userDetails = new UserDetails();
-		/**
-		 * load the properties files
-		 */
-		storeToCassandra.properties = rae.loadProperties("queries");
+				
+	
 		rae.LoadTwitterToken();
 		rae.Consumer = rae.GetConsumer();
-		//        System.out.println(rae.GetProfile("vietkungfu"));
-		//        System.out.println(rae.GetRateLimitStatus());
 		int apicode = InfoType.PROFILE_INFO;
 		String infilename = rae.DEF_FILENAME;
-		//String outfilename = rae.DEF_OUTFILENAME;
 		if(args!=null)
 		{
 			if(args.length>1)
@@ -133,7 +124,6 @@ public class RESTApi {
 					infilename = args[0];
 				}
 		}
-		//        rae.InitializeWriters(outfilename);
 		rae.ReadUsers(infilename);
 		if(apicode!=InfoType.PROFILE_INFO&&apicode!=InfoType.FOLLOWER_INFO&&apicode!=InfoType.FRIEND_INFO&&apicode!=InfoType.STATUSES_INFO)
 		{
@@ -142,70 +132,42 @@ public class RESTApi {
 		}
 		if(rae.Usernames.size()>0)
 		{
-			//TO-DO: Print the possible API types and get user selection to crawl the users.
 			rae.LoadTwitterToken();
 			for(String user:rae.Usernames)
 			{
-				int aaa=0;
-				System.out.println(++aaa);
 				if(apicode==InfoType.PROFILE_INFO)
 				{
 					JSONObject jobj = rae.GetProfile(user);
-					JSONArray a = (JSONArray) jobj.getJSONObject("status").getJSONObject("entities").get("user_mentions");
-					if(a.length() != 0) System.out.println(a.getJSONObject(0).get("name"));
-					if(jobj!=null&&jobj.length()==0)
+					if(jobj != null) rae.ReadUserDetails(jobj, storeToCassandra);
+				}
+				else if(apicode==InfoType.FRIEND_INFO)
+				{
+					JSONArray friends = rae.GetFriends(user);
+					if(friends.length()>0)
 					{
-						// Save PROFILE into cassandra ===================================================
-						//                    	rae.WriteToFile(user, jobj.toString());
-						//storeToCassandra
-		
+						rae.ReadFriendsDetails(friends,user,storeToCassandra);
 					}
 				}
-				else
-					if(apicode==InfoType.FRIEND_INFO)
+				else if(apicode == InfoType.FOLLOWER_INFO)
+				{
+					JSONArray followers = rae.GetFollowers(user);
+					if(followers.length()>0)
 					{
-						JSONArray statusarr = rae.GetFriends(user);
-						System.out.println(rae.GetFriends(user));
-						if(statusarr.length()>0)
-						{
-							// Save FOLLOWING-FRIEND into cassandra ====================================================
-							//                        rae.WriteToFile(user, statusarr.toString());
-						}
-						//System.out.println(statusarr);
+						rae.ReadFollowersDetails(followers, user, storeToCassandra);
 					}
-					else
-						if(apicode == InfoType.FOLLOWER_INFO)
-						{
-							System.out.println("aa");
-							JSONArray statusarr = rae.GetFollowers(user);
-							if(statusarr.length()>0)
-							{
-								// Save FOLLOWER into cassandra ====================================================
-								//                        rae.WriteToFile(user, statusarr.toString());
-								//System.out.println(user + statusarr);
-							}
-						}
-						else
-							if(apicode == InfoType.STATUSES_INFO)
-							{
-								JSONArray statusarr = rae.GetStatuses(user);
-								System.out.println(statusarr);
-								if(statusarr.length()>0)
-								{
-									// Save TWEET into cassandra ====================================================
-									//                        rae.GetStatuses(user);
-								}
-							}
+				}
+				else if(apicode == InfoType.STATUSES_INFO)
+				{
+					JSONArray statusarr = rae.GetStatuses(user);
+					if(statusarr.length()>0)
+					{
+						rae.ReadTweet(statusarr,user, storeToCassandra);
+					}
+				}
 			}
 		}
-		//        now you can close the files as all the threads have finished
-		rae.CleanupAfterFinish();
 	}
 
-	/**
-	 * Retrieves the rate limit status of the application
-	 * @return
-	 */
 	public JSONObject GetRateLimitStatus()
 	{
 		try{
@@ -238,61 +200,6 @@ public class RESTApi {
 		return null;
 	}
 
-	/**
-	 * Initialize the file writer
-	 * @param path of the file
-	 * @param outFilename name of the file
-	 */
-	//   public void InitializeWriters(String outFilename) {
-	//        try {
-	//            File fl = new File(outFilename);
-	//            if(!fl.exists())
-	//            {
-	//                fl.createNewFile();
-	//            }
-	//            /**
-	//             * Use UTF-8 encoding when saving files to avoid
-	//             * losing Unicode characters in the data
-	//             */
-	//            OutFileWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFilename,true),"UTF-8"));
-	//        } catch (IOException ex) {
-	//            ex.printStackTrace();
-	//        }
-	//    }
-
-	/**
-	 * Close the opened filewriter to save the data
-	 */
-	public void CleanupAfterFinish()
-	{
-		try {
-			OutFileWriter.close();
-		} catch (IOException ex) {
-			Logger.getLogger(RESTApi.class.getName()).log(Level.SEVERE, null, ex);
-		}
-	}
-
-	/**
-	 * Writes the retrieved data to the output file
-	 * @param data containing the retrived information in JSON
-	 * @param user name of the user currently being written
-	 */
-	//    public void WriteToFile(String user, String data)
-	//    {
-	//        try
-	//        {
-	//            OutFileWriter.write(data);
-	//            OutFileWriter.newLine();
-	//        } catch (IOException ex) {
-	//            ex.printStackTrace();
-	//        }
-	//    }
-
-	/**
-	 * Retrives the profile information of the user
-	 * @param username of the user whose profile needs to be retrieved
-	 * @return the profile information as a JSONObject
-	 */
 	public JSONObject GetProfile(String username)
 	{
 		BufferedReader bRead = null;
@@ -303,7 +210,6 @@ public class RESTApi {
 			URL url = new URL("https://api.twitter.com/1.1/users/show.json?screen_name="+username);
 			HttpURLConnection huc = (HttpURLConnection) url.openConnection();
 			huc.setReadTimeout(5000);
-			// Step 2: Sign the request using the OAuth Secret
 			Consumer.sign(huc);
 			huc.connect();
 			if(huc.getResponseCode()==404||huc.getResponseCode()==401){
@@ -319,7 +225,6 @@ public class RESTApi {
 					ex.printStackTrace();
 				}
 			}
-			// Step 3: If the requests have been exhausted, then wait until the quota is renewed
 			else if(huc.getResponseCode()==429)
 			{
 				try {
@@ -333,7 +238,6 @@ public class RESTApi {
 
 			if(!flag)
 			{
-				//recreate the connection because something went wrong the first time.
 				huc.connect();
 			}
 			StringBuilder content=new StringBuilder();
@@ -361,14 +265,10 @@ public class RESTApi {
 		} catch (IOException ex) {
 			ex.printStackTrace();
 		}
+		//System.out.(profile);
 		return profile;
 	}
 
-	/**
-	 * Retrieves the followers of a user
-	 * @param username the name of the user whose followers need to be retrieved
-	 * @return a list of user objects corresponding to the followers of the user
-	 */
 	public JSONArray GetFollowers(String username)
 	{
 		BufferedReader bRead = null;
@@ -384,11 +284,9 @@ public class RESTApi {
 				{
 					break;
 				}
-				// Step 1: Create the APi request using the supplied username
 				URL url = new URL("https://api.twitter.com/1.1/followers/list.json?screen_name="+username+"&cursor=" + cursor);
 				HttpURLConnection huc = (HttpURLConnection) url.openConnection();
 				huc.setReadTimeout(5000);
-				// Step 2: Sign the request using the OAuth Secret
 				Consumer.sign(huc);
 				huc.connect();
 				if(huc.getResponseCode()==400||huc.getResponseCode()==404)
@@ -409,7 +307,6 @@ public class RESTApi {
 						}
 					}
 					else
-						// Step 3: If the requests have been exhausted, then wait until the quota is renewed
 						if(huc.getResponseCode()==429)
 						{
 							try {
@@ -420,7 +317,6 @@ public class RESTApi {
 								Logger.getLogger(RESTApi.class.getName()).log(Level.SEVERE, null, ex);
 							}
 						}
-				// Step 4: Retrieve the followers list from Twitter
 				bRead = new BufferedReader(new InputStreamReader((InputStream) huc.getContent()));
 				StringBuilder content = new StringBuilder();
 				String temp = "";
@@ -430,7 +326,6 @@ public class RESTApi {
 				}
 				try {
 					JSONObject jobj = new JSONObject(content.toString());
-					// Step 5: Retrieve the token for the next request
 					cursor = jobj.getLong("next_cursor");
 					JSONArray idlist = jobj.getJSONArray("users");
 					if(idlist.length()==0)
@@ -457,11 +352,6 @@ public class RESTApi {
 		return followers;
 	}
 
-	/**
-	 * Retrieved the status messages of a user
-	 * @param username the name of the user whose status messages need to be retrieved
-	 * @return a list of status messages
-	 */
 	public JSONArray GetStatuses(String username)
 	{
 		BufferedReader bRead = null;
@@ -504,7 +394,6 @@ public class RESTApi {
 						}
 					}
 					else
-						// Step 3: If the requests have been exhausted, then wait until the quota is renewed
 						if(huc.getResponseCode()==429)
 						{
 							try {
@@ -542,7 +431,7 @@ public class RESTApi {
 					ex.printStackTrace();
 				}
 			}
-			System.out.println(statuses.length());
+			System.out.println(statuses);
 		} catch (OAuthCommunicationException ex) {
 			ex.printStackTrace();
 		} catch (OAuthMessageSignerException ex) {
@@ -555,17 +444,12 @@ public class RESTApi {
 		return statuses;
 	}
 
-	/**
-	 * Retrieves the friends of a user
-	 * @param username the name of the user whose friends need to be fetched
-	 * @return a list of user objects who are friends of the user
-	 */
 	public JSONArray GetFriends(String username)
 	{
 		BufferedReader bRead = null;
 		JSONArray friends = new JSONArray();
 		try {
-			System.out.println("Processing friends of "+username);
+			//System.out.println("Processing friends of "+username);
 			long cursor = -1;
 			while(true)
 			{
@@ -573,11 +457,9 @@ public class RESTApi {
 				{
 					break;
 				}
-				// Step 1: Create the APi request using the supplied username
 				URL url = new URL("https://api.twitter.com/1.1/friends/list.json?screen_name="+username+"&cursor="+cursor);
 				HttpURLConnection huc = (HttpURLConnection) url.openConnection();
 				huc.setReadTimeout(5000);
-				//Step 2: Sign the request using the OAuth Secret
 				Consumer.sign(huc);
 				huc.connect();
 				if(huc.getResponseCode()==400||huc.getResponseCode()==401)
@@ -597,7 +479,6 @@ public class RESTApi {
 						}
 					}
 					else
-						// Step 3: If the requests have been exhausted, then wait until the quota is renewed
 						if(huc.getResponseCode()==429)
 						{
 							try {
@@ -608,7 +489,6 @@ public class RESTApi {
 								ex.printStackTrace();
 							}
 						}
-				// Step 4: Retrieve the friends list from Twitter
 				bRead = new BufferedReader(new InputStreamReader((InputStream) huc.getContent()));
 				StringBuilder content = new StringBuilder();
 				String temp = "";
@@ -618,7 +498,6 @@ public class RESTApi {
 				}
 				try {
 					JSONObject jobj = new JSONObject(content.toString());
-					// Step 5: Retrieve the token for the next request
 					cursor = jobj.getLong("next_cursor");
 					JSONArray userlist = jobj.getJSONArray("users");
 					if(userlist.length()==0)
@@ -643,14 +522,10 @@ public class RESTApi {
 		} catch (IOException ex) {
 			ex.printStackTrace();
 		}
+
 		return friends;
 	}
 
-	/**
-	 * Retrieves the wait time if the API Rate Limit has been hit
-	 * @param api the name of the API currently being used
-	 * @return the number of milliseconds to wait before initiating a new request
-	 */
 	public long GetWaitTime(String api)
 	{
 		JSONObject jobj = this.GetRateLimitStatus();
@@ -666,20 +541,17 @@ public class RESTApi {
 						JSONObject statusobj = resourcesobj.getJSONObject("statuses");
 						apilimit = statusobj.getJSONObject(api);
 					}
-					else
-						if(api.equals(APIType.FOLLOWERS))
+					else if(api.equals(APIType.FOLLOWERS))
 						{
 							JSONObject followersobj = resourcesobj.getJSONObject("followers");
 							apilimit = followersobj.getJSONObject(api);
 						}
-						else
-							if(api.equals(APIType.FRIENDS))
+						else if(api.equals(APIType.FRIENDS))
 							{
 								JSONObject friendsobj = resourcesobj.getJSONObject("friends");
 								apilimit = friendsobj.getJSONObject(api);
 							}
-							else
-								if(api.equals(APIType.USER_PROFILE))
+							else if(api.equals(APIType.USER_PROFILE))
 								{
 									JSONObject userobj = resourcesobj.getJSONObject("users");
 									apilimit = userobj.getJSONObject(api);
@@ -699,35 +571,107 @@ public class RESTApi {
 		return 0;
 	}
 
-	private Properties loadProperties(String propertiesFileName) {
-		Properties prop = new Properties();
-		try {
-			prop.load(new FileInputStream(propertiesFileName + ".properties"));
-		} catch (IOException ex) {
-			ex.printStackTrace();
-			System.err.println(ex.getMessage());
-		}
-
-		return prop;
-	}
-	
-	private void ReadUserDetails(UserDetails userDetails,JSONObject jobj){
+	private void ReadUserDetails(JSONObject jobj, StoreToCassandra storeToCassandra){
+		UserDetails userDetails = new UserDetails();
 		try{
-			 
-	        userDetails.setScreenName(jobj.getString("screen_name"));
-	        userDetails.setTweetId(jobj.getLong("id"));
-	        userDetails.setUserName(jobj.getString("name"));
-	        userDetails.setLocation(jobj.getString("location"));
-	        userDetails.setCreatedDate((Date) jobj.get("create_at"));
-	        userDetails.setUrl((String) jobj.get("url"));
-	        System.out.println("FOLLOWING ********" + jobj);
-
-	        List<FriendsDetails> friendsDetailsList = new LinkedList<FriendsDetails>();
-	        List<String> friendsName = new LinkedList<String>();
-	        System.out.println(jobj.getString("name")+ "Inserted!!");
+			userDetails.setScreenName(jobj.getString("screen_name"));
+			userDetails.setTweetId(jobj.getLong("id"));
+			userDetails.setUserName(jobj.getString("name"));
+			userDetails.setLocation(jobj.getString("location"));
+			Date date = new SimpleDateFormat("EEE MMM dd HH:mm:ss Z yyyy", Locale.ENGLISH).parse(jobj.getString("created_at"));
+			userDetails.setCreatedDate(date);
+			System.out.println(date);
+			userDetails.setUrl((String) jobj.get("url"));
+			//System.out.println("==========FOLLOWING " + jobj);
+			System.out.println(jobj.getString("name")+ "is inserted.");
 		}catch (Exception e){
 			e.printStackTrace();
 		}
+		storeToCassandra.connectToCassandra();
+		storeToCassandra.insertUserDetail(userDetails);
+		storeToCassandra.disconnectFromCassandra();
+		//return userDetails;
+	}
+
+	private void ReadFriendsDetails(JSONArray friends, String user, StoreToCassandra storeToCassandra){
+		FriendList friendsList = new FriendList(); 
+		List<String> friendsName = new LinkedList<String>();
+		storeToCassandra.connectToCassandra();
+		for (int i=0;i < friends.length();i++) {
+			try{
+				JSONObject friend = friends.getJSONObject(i); 
+	            FriendsDetails friendsDetail = new FriendsDetails();
+	            friendsName.add(friend.getString("name"));
+	            friendsDetail.setFriendName(friend.getString("name"));
+	            if (friend.getString("url") == null) friendsDetail.setUrl("");
+	            	else friendsDetail.setUrl(friend.getString("url"));
+	            friendsDetail.setUserScreenName(user);
+	            friendsDetail.setCreatedDate(new SimpleDateFormat("EEE MMM dd HH:mm:ss Z yyyy", Locale.ENGLISH).parse(friend.getString("created_at")));
+	            friendsDetail.setFriendScreenName(friend.getString("screen_name"));
+	            friendsDetail.setLocation(friend.getString("location"));
+	            friendsDetail.setTweetId(friend.getLong("id"));
+	            System.out.println(i);
+	            
+	    		storeToCassandra.insertFriendDetails(friendsDetail);	    		
+			}catch (Exception e){
+				e.printStackTrace();
+			}
+		}
 		
+		friendsList.setScreenName(user);
+		friendsList.setFriendList(friendsName);
+		
+		storeToCassandra.insertFriendsList(friendsList);
+		storeToCassandra.disconnectFromCassandra();
+	}
+	
+	private void ReadFollowersDetails(JSONArray followers, String user, StoreToCassandra storeToCassandra){
+		List<String> followersName = new LinkedList<String>();
+		FollowerList followerList =new FollowerList();
+		storeToCassandra.connectToCassandra();
+		for (int i=0;i < followers.length();i++) {
+			try{
+				JSONObject follower = followers.getJSONObject(i); 
+	            FollowersDetails followersDetail = new FollowersDetails();
+	            followersName.add(follower.getString("name"));
+	            followersDetail.setFollowerName(follower.getString("name"));
+	            if (follower.getString("url") == null) followersDetail.setUrl("");
+	            	else followersDetail.setUrl(follower.getString("url"));
+	            followersDetail.setUserScreenName(user);
+	            followersDetail.setCreatedDate(new SimpleDateFormat("EEE MMM dd HH:mm:ss Z yyyy", Locale.ENGLISH).parse(follower.getString("created_at")));
+	            followersDetail.setFollowerScreenName(follower.getString("screen_name"));
+	            followersDetail.setLocation(follower.getString("location"));
+	            followersDetail.setTweetId(follower.getLong("id"));
+	            System.out.println(i);
+	            
+	    		storeToCassandra.insertFollowersDetails(followersDetail);
+			}catch (Exception e){
+				e.printStackTrace();
+			}
+		}
+		//StoreToCassandra.connectToCassandra();
+		followerList.setScreenName(user);
+		followerList.setFollowerList(followersName);
+		
+		storeToCassandra.insertFollowersList(followerList);
+		storeToCassandra.disconnectFromCassandra();
+	}
+	
+	private void ReadTweet(JSONArray statusarr, String user, StoreToCassandra storeToCassandra){
+		storeToCassandra.connectToCassandra();
+		for (int i=0;i < statusarr.length();i++) {
+			try{
+				JSONObject status = statusarr.getJSONObject(i); 
+	            Tweet tweet = new Tweet();
+	            tweet.setScreenName(user);
+	            tweet.setStatusId(status.getLong("id"));
+	            tweet.setTitle(status.getString("text"));
+	            tweet.setPublishedDate(new SimpleDateFormat("EEE MMM dd HH:mm:ss Z yyyy", Locale.ENGLISH).parse(status.getString("created_at")));
+	            storeToCassandra.insertTweet(tweet);
+			}catch (Exception e){
+				e.printStackTrace();
+			}
+		}
+		storeToCassandra.disconnectFromCassandra();
 	}
 }
