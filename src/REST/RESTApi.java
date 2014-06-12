@@ -102,11 +102,8 @@ public class RESTApi {
 
 	public static void main(String[] args) throws JSONException
 	{
-		System.out.println("aaaaa");
+		//System.out.println("aaaaa");
 		RESTApi rae = new RESTApi();
-		StoreToCassandra storeToCassandra = new StoreToCassandra();
-				
-	
 		rae.LoadTwitterToken();
 		rae.Consumer = rae.GetConsumer();
 		int apicode = InfoType.PROFILE_INFO;
@@ -137,14 +134,20 @@ public class RESTApi {
 			{
 				if(apicode==InfoType.PROFILE_INFO)
 				{
+					
 					JSONObject jobj = rae.GetProfile(user);
-					if(jobj != null) rae.ReadUserDetails(jobj, storeToCassandra);
+					if(jobj != null) 
+					{
+						StoreToCassandra storeToCassandra = new StoreToCassandra();
+						rae.ReadUserDetails(jobj, storeToCassandra);
+					}
 				}
 				else if(apicode==InfoType.FRIEND_INFO)
 				{
 					JSONArray friends = rae.GetFriends(user);
 					if(friends.length()>0)
 					{
+						StoreToCassandra storeToCassandra = new StoreToCassandra();
 						rae.ReadFriendsDetails(friends,user,storeToCassandra);
 					}
 				}
@@ -153,6 +156,7 @@ public class RESTApi {
 					JSONArray followers = rae.GetFollowers(user);
 					if(followers.length()>0)
 					{
+						StoreToCassandra storeToCassandra = new StoreToCassandra();
 						rae.ReadFollowersDetails(followers, user, storeToCassandra);
 					}
 				}
@@ -161,6 +165,7 @@ public class RESTApi {
 					JSONArray statusarr = rae.GetStatuses(user);
 					if(statusarr.length()>0)
 					{
+						StoreToCassandra storeToCassandra = new StoreToCassandra();
 						rae.ReadTweet(statusarr,user, storeToCassandra);
 					}
 				}
@@ -588,7 +593,9 @@ public class RESTApi {
 			e.printStackTrace();
 		}
 		storeToCassandra.connectToCassandra();
+		System.out.println("Day la sau connect");
 		storeToCassandra.insertUserDetail(userDetails);
+		System.out.println("Day la sau insert");
 		storeToCassandra.disconnectFromCassandra();
 		//return userDetails;
 	}
@@ -667,6 +674,7 @@ public class RESTApi {
 	            tweet.setStatusId(status.getLong("id"));
 	            tweet.setTitle(status.getString("text"));
 	            tweet.setPublishedDate(new SimpleDateFormat("EEE MMM dd HH:mm:ss Z yyyy", Locale.ENGLISH).parse(status.getString("created_at")));
+	            System.out.println(user + status.getLong("id")+ status.getString("text") + new SimpleDateFormat("EEE MMM dd HH:mm:ss Z yyyy", Locale.ENGLISH).parse(status.getString("created_at")));
 	            storeToCassandra.insertTweet(tweet);
 			}catch (Exception e){
 				e.printStackTrace();

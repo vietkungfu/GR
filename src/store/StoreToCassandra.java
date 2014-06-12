@@ -1,8 +1,5 @@
 package store;
 
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Locale;
 import java.util.Properties;
 
 import Bean.FollowerList;
@@ -12,8 +9,12 @@ import Bean.FriendsDetails;
 import Bean.Tweet;
 import Bean.UserDetails;
 
+//import org.slf4j.LoggerFactory;
+
+
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 
@@ -21,14 +22,22 @@ import store.CassandraInfo;
 
 public class StoreToCassandra {
 	
-	Cluster cluster = null;
-    Session session = null;
+	private Cluster cluster;
+    private Session session;
     public  Properties properties;
     
     public void connectToCassandra(){
-    	cluster = Cluster.builder().addContactPoint(properties.getProperty(CassandraInfo.NODE)).build();
-    	session = cluster.connect(properties.getProperty(CassandraInfo.KEYSPACE));
-    	System.out.println("CONNECTED TO " + CassandraInfo.KEYSPACE);
+    	System.out.println(CassandraInfo.NODE);
+    	try{
+	    	cluster = Cluster.builder().addContactPoint(CassandraInfo.NODE).withPort(CassandraInfo.PORT).build();
+	    	Metadata metadata = cluster.getMetadata();
+	        System.out.printf("Connected to cluster: %s\n", 
+	              metadata.getClusterName());
+	    	session = cluster.connect(CassandraInfo.KEYSPACE);
+	    	System.out.println("CONNECTED TO " + CassandraInfo.KEYSPACE);
+    	}catch (ExceptionInInitializerError e){
+    		e.printStackTrace();
+    	}
     }
     
     public void insertUserDetail(UserDetails userDetail){
@@ -105,16 +114,12 @@ public class StoreToCassandra {
     public void insertTweet(Tweet tweet){
     	BoundStatement boundStatement = null;
     	PreparedStatement prepare_statement = null;
-    	prepare_statement = session.prepare(CassandraInfo.INSERT_FOLLOWER_DETAILS);
-    	Calendar currentDate = Calendar.getInstance();
-    	SimpleDateFormat formatter= new SimpleDateFormat("EEE MMM dd HH:mm:ss Z yyyy", Locale.ENGLISH); //format it as per your requirement
-    	String dateNow = formatter.format(currentDate.getTime());
+    	prepare_statement = session.prepare(CassandraInfo.INSERT_TWEET);
     	boundStatement = new BoundStatement(prepare_statement);
     	session.execute(boundStatement.bind(
     			tweet.getStatusId(),
     			tweet.getScreenName(),
     			tweet.getPublishedDate(),
-    			dateNow,
     			tweet.getTitle()
 		));
     }

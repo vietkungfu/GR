@@ -1,0 +1,21 @@
+N?u 1 msg m du?c phân phát b?i 1 server thì nó s? dc phân phát sau cung b?i t?t c? các server
+Ð?i khái là FIFO
+
+V?n d? khi s? d?ng FIFO channel v?i TCP: theo th? t? msg dc phân phát
+a->m->b
+n?u m b? m?t thì b cung b? m?t.
+Ð? k b? fail thì ph?i dùng timeout( th?i gian tr? t?m ngung) tuy nhiên s? k an toàn n?u timeout ng?ng ho?t d?ng.
+=> dó là v?n d?.
+Zookeeper s? bao g?m t?t c? order msg và t?t c? các proposal (t?t c? các proposal d?u ch?a msg ngo?i tr? NEW_LEADER)
+Zoo s? dua ra t?t c? các order b?ng vi?c s? d?ng zoo transaction id(zxid)
+gán zxid cho các proposal.
+các proposal s? dc g?i cho t?t c? zoo server.
+n?u 1 propo ch?a 1 msg, thì msg dc phân phát khi propo dc commit.
+Acknowledgement means the server has recorded the proposal to persistent storage. 
+Our quorums have the requirement that any pair of quorum must have at least one server in common
+t?t c? các quorum có yêu c?u là c? 1 c?p thì ph?i có ít nh?t server chung.
+nghia là c? n/2+1 server t?o nên 1 zoo service
+M?i zxid s? có 2 ph?n: epoch(là b?t d?u) và counter
+là s? 64bit: 32 bit epoch và 32 bit counter
+C? m?i l?n newleader truy c?p vào thì s? có 1 epoch.
+gán zxid thì newleader s? tang d?n cho các propo

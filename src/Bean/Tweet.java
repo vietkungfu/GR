@@ -3,10 +3,10 @@ package Bean;
 import java.util.Date;
 
 public class Tweet {
-	String screenName = "";
-    String title = "";
-    Long status_id = 0L;
-    Date published_date = null;
+	String screenName;
+    String title;
+    Long status_id;
+    Date published_date;
   
     public String getScreenName() {
         return screenName;
